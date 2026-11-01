@@ -1,0 +1,6 @@
+{
+  "name": "ChevoLabs Terraform CI",
+  "description": "Secret scan + terraform fmt, validate, TFLint and an OIDC read-only plan using the ChevoLabs reusable workflows.",
+  "categories": ["HCL", "Terraform"],
+  "filePatterns": [".*\\.tf$"]
+}

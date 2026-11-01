@@ -1,0 +1,20 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [$default-branch]
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    uses: ChevoLabs/.github/.github/workflows/reusable-secret-scan.yml@v1
+    permissions:
+      contents: read
+
+  node:
+    uses: ChevoLabs/.github/.github/workflows/reusable-node-ci.yml@v1
+    permissions:
+      contents: read

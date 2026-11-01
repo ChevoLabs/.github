@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/ChevoLabs/.github/blob/main/SECURITY.md
+    about: Please report privately; do not open a public issue.
+  - name: Product or customer support
+    url: https://chevolabs.com
+    about: GitHub issues are for development work only. Use the contact details on the product's website.

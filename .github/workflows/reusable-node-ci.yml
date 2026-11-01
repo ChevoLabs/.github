@@ -1,0 +1,94 @@
+# Reusable: install, lint, typecheck, test, build and audit a Node.js project (npm).
+#
+# Caller:
+#   jobs:
+#     node:
+#       uses: ChevoLabs/.github/.github/workflows/reusable-node-ci.yml@v1
+#       permissions:
+#         contents: read
+#       with:
+#         build-env: |
+#           NEXT_PUBLIC_SITE_URL=${{ vars.SITE_URL_STAGING }}
+name: reusable-node-ci
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory that contains package.json
+        type: string
+        default: "."
+      node-version-file:
+        description: File with the Node.js version (relative to working-directory)
+        type: string
+        default: ".nvmrc"
+      build:
+        description: Run `npm run build` (if the script exists)
+        type: boolean
+        default: true
+      build-env:
+        description: Non-secret KEY=VALUE lines exported before build (one per line)
+        type: string
+        default: ""
+      audit-level:
+        description: npm audit level that fails the job (low, moderate, high, critical)
+        type: string
+        default: "high"
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: node
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ${{ inputs.working-directory }}/${{ inputs.node-version-file }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Install (lockfile only)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Export build variables
+        if: inputs.build && inputs.build-env != ''
+        env:
+          BUILD_ENV: ${{ inputs.build-env }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            if ! printf '%s' "$line" | grep -Eq '^[A-Z_][A-Z0-9_]*=[^[:cntrl:]]*$'; then
+              echo "::error::build-env line is not KEY=VALUE: ${line%%=*}"
+              exit 1
+            fi
+            printf '%s\n' "$line" >> "$GITHUB_ENV"
+          done <<< "$BUILD_ENV"
+
+      - name: Build
+        if: inputs.build
+        run: npm run build --if-present
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level="${{ inputs.audit-level }}"

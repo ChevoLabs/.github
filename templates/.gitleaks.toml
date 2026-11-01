@@ -1,0 +1,17 @@
+# gitleaks configuration (copy to the repository root). Projects may add their own documented placeholders.
+title = "ChevoLabs gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented placeholders"
+regexes = [
+  '''<ACCOUNT_ID>''',
+  '''<ZONE_ID>''',
+  '''d-xxxxxxxxxx''',
+]
+paths = [
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)\.terraform\.lock\.hcl$''',
+]

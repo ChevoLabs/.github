@@ -1,0 +1,154 @@
+# Reusable: Terraform format, validate, TFLint and (optionally) plan with an AWS OIDC role.
+#
+# Caller (the caller job must grant id-token: write for planning):
+#   jobs:
+#     terraform:
+#       uses: ChevoLabs/.github/.github/workflows/reusable-terraform-ci.yml@v1
+#       permissions:
+#         contents: read
+#         id-token: write
+#       with:
+#         validate-directories: '["bootstrap","envs/production"]'
+#         plan-directories: '["envs/production"]'
+#         aws-role-arn: ${{ vars.AWS_ROLE_ARN_INFRA_PLAN }}
+name: reusable-terraform-ci
+
+on:
+  workflow_call:
+    inputs:
+      validate-directories:
+        description: JSON array of root modules to `init -backend=false` + `validate`
+        type: string
+        default: '["."]'
+      plan-directories:
+        description: JSON array of root modules to plan (each needs backend.hcl). Empty = no plan
+        type: string
+        default: "[]"
+      aws-role-arn:
+        description: Role to assume for planning (empty = no plan)
+        type: string
+        default: ""
+      aws-region:
+        type: string
+        default: "ap-southeast-1"
+      terraform-version:
+        type: string
+        default: "1.17.1"
+      tflint-version:
+        type: string
+        default: "v0.65.0"
+      detailed-exitcode:
+        description: Fail when the plan has changes (drift detection)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: fmt-validate-tflint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: ${{ inputs.tflint-version }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: terraform validate
+        env:
+          DIRS: ${{ inputs.validate-directories }}
+        run: |
+          set -euo pipefail
+          for d in $(jq -r '.[]' <<< "$DIRS"); do
+            echo "::group::validate $d"
+            terraform -chdir="$d" init -backend=false -input=false
+            terraform -chdir="$d" validate
+            echo "::endgroup::"
+          done
+
+      - name: tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # avoids rate limits when downloading TFLint plugins
+        run: |
+          set -euo pipefail
+          if [ -f .tflint.hcl ]; then
+            tflint --init --config "$PWD/.tflint.hcl"
+            tflint --recursive --config "$PWD/.tflint.hcl" --format compact
+          else
+            tflint --recursive --format compact
+          fi
+
+  plan:
+    name: plan (${{ matrix.dir }})
+    if: inputs.aws-role-arn != '' && inputs.plan-directories != '[]'
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: ${{ fromJSON(inputs.plan-directories) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: AWS credentials (OIDC, read-only plan role)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ inputs.aws-role-arn }}
+          aws-region: ${{ inputs.aws-region }}
+          role-session-name: gha-plan-${{ github.run_id }}
+
+      - name: terraform init
+        run: terraform -chdir="${{ matrix.dir }}" init -input=false -backend-config=backend.hcl
+
+      - name: terraform plan
+        env:
+          DIR: ${{ matrix.dir }}
+          DETAILED: ${{ inputs.detailed-exitcode }}
+        run: |
+          set -uo pipefail
+          terraform -chdir="$DIR" plan -input=false -no-color -lock-timeout=120s \
+            -detailed-exitcode -out=tfplan > "$RUNNER_TEMP/plan.log" 2>&1
+          code=$?
+          tail -n 40 "$RUNNER_TEMP/plan.log"
+          {
+            echo "### Terraform plan: \`$DIR\`"
+            echo '```'
+            terraform -chdir="$DIR" show -no-color tfplan 2>/dev/null | tail -n 300 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -eq 1 ]; then
+            echo "::error::terraform plan failed in $DIR"; exit 1
+          fi
+          if [ "$code" -eq 2 ] && [ "$DETAILED" = "true" ]; then
+            echo "::error::Drift: $DIR has changes not applied"; exit 1
+          fi
+          exit 0

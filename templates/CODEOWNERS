@@ -1,0 +1,3 @@
+# Copy to .github/CODEOWNERS. Enforced only with branch protection/rulesets (GitHub Team or public repos).
+# Create the team first: Organization → Teams → New team "maintainers".
+*                       @ChevoLabs/maintainers

@@ -1,0 +1,33 @@
+name: Task
+description: Planned work or a follow-up.
+title: "feat: "
+labels: ["type:feature"]
+body:
+  - type: input
+    id: ids
+    attributes:
+      label: Related ids
+      placeholder: Planning or decision ids, if the project uses them
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true when this is done?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] …
+        - [ ] …
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [web, api, infra, docs, other]
+    validations:
+      required: true

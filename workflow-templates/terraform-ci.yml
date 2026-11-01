@@ -1,0 +1,25 @@
+name: infra-ci
+
+on:
+  pull_request:
+  push:
+    branches: [$default-branch]
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    uses: ChevoLabs/.github/.github/workflows/reusable-secret-scan.yml@v1
+    permissions:
+      contents: read
+
+  terraform:
+    uses: ChevoLabs/.github/.github/workflows/reusable-terraform-ci.yml@v1
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      validate-directories: '["bootstrap","envs/production"]'
+      plan-directories: '["envs/production"]'
+      aws-role-arn: ${{ vars.AWS_ROLE_ARN_INFRA_PLAN }}

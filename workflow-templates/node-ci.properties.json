@@ -1,0 +1,6 @@
+{
+  "name": "ChevoLabs Node.js CI",
+  "description": "Secret scan + npm ci, lint, typecheck, test, build and audit using the ChevoLabs reusable workflows.",
+  "categories": ["JavaScript", "TypeScript"],
+  "filePatterns": ["package.json$"]
+}

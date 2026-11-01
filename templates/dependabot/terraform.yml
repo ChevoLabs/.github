@@ -1,0 +1,17 @@
+# Terraform repositories → .github/dependabot.yml. Adjust `directories` to your root modules.
+version: 2
+updates:
+  - package-ecosystem: terraform
+    directories: ["/bootstrap", "/envs/*", "/modules/*"]
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Colombo }
+    labels: ["dependencies"]
+    commit-message: { prefix: "infra" }
+    groups:
+      terraform-providers: { patterns: ["*"] }
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Colombo }
+    labels: ["dependencies"]
+    commit-message: { prefix: "ci" }
+    groups:
+      actions: { patterns: ["*"] }
