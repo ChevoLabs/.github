@@ -4,8 +4,6 @@
 
 **ChevoLabs is a organization** that designs, builds and runs web applications and the cloud infrastructure behind them.
 
-- 🌐 [chevolabs.com](https://chevolabs.com)  
-
 ### How we work
 
 - **Secure by default.** Least-privilege cloud access, no long-lived keys in CI, secrets scanning on every change.
