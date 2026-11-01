@@ -27,11 +27,12 @@ gh repo edit "$repo" \
   --enable-projects=false \
   --enable-discussions=false \
   --enable-squash-merge \
+  --squash-merge-commit-message pr-title-description \
   --enable-merge-commit=false \
   --enable-rebase-merge=false \
   --allow-update-branch \
-  --delete-branch-on-merge \
   --add-topic "$topics"
+# --delete-branch-on-merge \
 
 gh api -X PUT "repos/$repo/vulnerability-alerts" >/dev/null && echo "  ✓ Dependabot alerts"
 gh api -X PUT "repos/$repo/automated-security-fixes" >/dev/null && echo "  ✓ Dependabot security updates"
