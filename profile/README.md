@@ -2,10 +2,9 @@
 
 # ChevoLabs
 
-**ChevoLabs is a software development company** (currently being set up) that designs, builds and runs web
-applications and the cloud infrastructure behind them.
+**ChevoLabs is a organization** that designs, builds and runs web applications and the cloud infrastructure behind them.
 
-- 🌐 [chevolabs.com](https://chevolabs.com) *(coming soon)*
+- 🌐 [chevolabs.com](https://chevolabs.com)  
 
 ### How we work
 
